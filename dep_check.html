@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>dep check (stlite)</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@stlite/browser@1.8.1/build/stlite.css"
+  />
+  <script
+    type="module"
+    src="https://cdn.jsdelivr.net/npm/@stlite/browser@1.8.1/build/stlite.js"
+  ></script>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    streamlit-app { display: block; height: 100vh; }
+  </style>
+</head>
+<body>
+  <streamlit-app>
+    <app-file name="app.py" entrypoint>
+import streamlit as st
+
+# Set up page config
+st.set_page_config(page_title="URL Parameter Parser", page_icon="🔗", layout="centered")
+
+st.title("🔗 URL Query Parameter Parser")
+st.write("This app reads and displays query parameters directly from the host URL.")
+
+# Optional: Helper tool to see everything currently in the URL
+if st.checkbox("Show all active query parameters"):
+    st.json(dict(st.query_params))
+
+st.divider()
+
+# ==========================================
+# PART 1: Auto-parse specific 'mapiKey'
+# ==========================================
+st.subheader("Part 1: Automatic `mapiKey` Detection")
+
+# Extract the 'mapiKey' parameter if it exists
+mapi_key_val = st.query_params.get("mapiKey")
+
+if mapi_key_val:
+    st.success("Found `mapiKey` in the URL!")
+    st.code(mapi_key_val, wrap_lines=True)
+else:
+    st.info("No `mapiKey` detected in the current URL.")
+    st.caption("💡 To test this, append `?mapiKey=your_test_key` to the end of your browser's URL and press Enter.")
+
+
+st.divider()
+
+# ==========================================
+# PART 2: Dynamic Parameter Lookup
+# ==========================================
+st.subheader("Part 2: Dynamic Parameter Input Lookup")
+
+# Text input for the user to type any parameter key they want to search for
+custom_param_name = st.text_input(
+    "Enter a custom parameter name to look up:", 
+    placeholder="e.g., token, user, status"
+)
+
+if custom_param_name:
+    # Look up the user-defined parameter
+    dynamic_val = st.query_params.get(custom_param_name)
+    
+    if dynamic_val:
+        st.success(f"Found value for parameter: `{custom_param_name}`")
+        st.info(f"**Value:** {dynamic_val}")
+    else:
+        st.warning(f"The parameter `{custom_param_name}` does not exist in the current URL.")
+    </app-file>
+    <app-requirements>
+    </app-requirements>
+  </streamlit-app>
+</body>
+</html>
