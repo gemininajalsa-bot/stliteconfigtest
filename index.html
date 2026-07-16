@@ -4038,7 +4038,7 @@ if "mapiKey" in st.query_params: #and st.session_state["MAPI"] != st.query_param
         MAPI_KEY(st.session_state["MAPI"])
         st.session_state["model_synced"] = True
     except Exception:
-        st.error("Cannot connect API error")
+        st.error("error : Cannot connect API")
         st.session_state["model_synced"] = False
 
 # st.title("Multi-Group Tapered I-Section Optimizer")
@@ -4151,10 +4151,10 @@ if st.session_state["MAPI"] and st.session_state.get("model_synced"):
         st.write("<br>", unsafe_allow_html=True)
         
     except Exception as e:
-        st.error(f"Cannot connect API error or an error occurred: {e}")
+        st.error(f"error: Cannot connect API")
         selected = None
 elif st.session_state["MAPI"] and not st.session_state.get("model_synced"):
-    st.error("Cannot connect API error")
+    st.error("error: Cannot connect API")
 
 # ====================== DYNAMIC PEB UNIT / SPLICE GROUP FORM ======================
 def add_entity():
