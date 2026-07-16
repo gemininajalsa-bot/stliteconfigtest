@@ -30,7 +30,7 @@ import streamlit as st
 import numpy as np
 import json
 #from time import time
-# import asyncio
+import asyncio
 from time import sleep, time
 from typing import List, Dict, Tuple, Any, Optional,Literal
 import requests
@@ -4242,6 +4242,7 @@ if st.button("Run Optimization", type="primary", width='stretch'):
     
     status_box = st.empty()
     status_box.info("Optimization has STARTED. This may take 30–90 seconds. Please wait…") 
+    asyncio.sleep(0.5)
     #changing units to N and mm #here
     unit_data_cache = MidasAPI("GET", "/db/UNIT", {}) #storing old ones
     # Unit switching logic
