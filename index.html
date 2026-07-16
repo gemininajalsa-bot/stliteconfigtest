@@ -1366,83 +1366,83 @@ class Element():
                 
                 return beam_obj
         
-        @staticmethod
-        def PLine(points_loc: list, n_div: int = 0, deg: int = 1, includePoint: bool = False,
-                  mat: int = 1, sect: int = 1, angle: list[float] = 0,
-                  group: str = "", id: int = None, bLocalAxis: bool = False,
-                  div_axis: Literal['X','Y','Z','L'] = "L"):
-            """Create beam elements along a polyline through multiple points.
+        # @staticmethod
+        # def PLine(points_loc: list, n_div: int = 0, deg: int = 1, includePoint: bool = False,
+        #           mat: int = 1, sect: int = 1, angle: list[float] = 0,
+        #           group: str = "", id: int = None, bLocalAxis: bool = False,
+        #           div_axis: Literal['X','Y','Z','L'] = "L"):
+        #     """Create beam elements along a polyline through multiple points.
 
-            Points are optionally interpolated along a spline of degree ``deg``
-            before elements are created. The beta angle is MAKIMA-interpolated
-            across elements when a list is supplied.
+        #     Points are optionally interpolated along a spline of degree ``deg``
+        #     before elements are created. The beta angle is MAKIMA-interpolated
+        #     across elements when a list is supplied.
 
-            Args:
-                points_loc (list[list[float]]): Control points ``[[x,y,z], ...]``
-                    defining the polyline path.
-                n_div (int): Number of divisions along the spline. ``0`` uses
-                    the raw points without interpolation.
-                deg (int): Spline degree for interpolation (1 = linear,
-                    2 = quadratic, 3 = cubic). Clamped to
-                    ``[1, len(points_loc)-1]``.
-                includePoint (bool): When ``True``, the original control points
-                    are forced into the interpolated output even if they fall
-                    between two division points.
-                mat (int): Material property number. Default ``1``.
-                sect (int): Section property number. Default ``1``.
-                angle (float | list[float]): Beta angle(s) in degrees for
-                    section orientation.
+        #     Args:
+        #         points_loc (list[list[float]]): Control points ``[[x,y,z], ...]``
+        #             defining the polyline path.
+        #         n_div (int): Number of divisions along the spline. ``0`` uses
+        #             the raw points without interpolation.
+        #         deg (int): Spline degree for interpolation (1 = linear,
+        #             2 = quadratic, 3 = cubic). Clamped to
+        #             ``[1, len(points_loc)-1]``.
+        #         includePoint (bool): When ``True``, the original control points
+        #             are forced into the interpolated output even if they fall
+        #             between two division points.
+        #         mat (int): Material property number. Default ``1``.
+        #         sect (int): Section property number. Default ``1``.
+        #         angle (float | list[float]): Beta angle(s) in degrees for
+        #             section orientation.
 
-                    - Single value → constant angle along all elements.
-                    - Two values ``[start, end]`` → linearly interpolated.
-                    - Three or more values → MAKIMA-interpolated; values are
-                      placed at equally spaced positions along the polyline,
-                      e.g. ``[0, 10, 0]`` means 0° at start, 10° at mid,
-                      0° at end.
+        #             - Single value → constant angle along all elements.
+        #             - Two values ``[start, end]`` → linearly interpolated.
+        #             - Three or more values → MAKIMA-interpolated; values are
+        #               placed at equally spaced positions along the polyline,
+        #               e.g. ``[0, 10, 0]`` means 0° at start, 10° at mid,
+        #               0° at end.
 
-                group (str | list[str]): Structure group(s) to assign each
-                    element and its nodes to.
-                id (int | None): Starting element ID. Subsequent elements
-                    receive ``id+1``, ``id+2``, … Auto-assigned when ``None``.
-                bLocalAxis (bool): If ``True``, accumulates the local axis
-                    vectors onto the end nodes (used for skew angle display).
-                div_axis (Literal['X','Y','Z','L']): Axis along which equal
-                    spacing is measured during interpolation.
-                    ``'L'`` = arc length (default).
+        #         group (str | list[str]): Structure group(s) to assign each
+        #             element and its nodes to.
+        #         id (int | None): Starting element ID. Subsequent elements
+        #             receive ``id+1``, ``id+2``, … Auto-assigned when ``None``.
+        #         bLocalAxis (bool): If ``True``, accumulates the local axis
+        #             vectors onto the end nodes (used for skew angle display).
+        #         div_axis (Literal['X','Y','Z','L']): Axis along which equal
+        #             spacing is measured during interpolation.
+        #             ``'L'`` = arc length (default).
 
-            Returns:
-                list[Element.Beam]: Created beam element objects, in order
-                from start to end.
+        #     Returns:
+        #         list[Element.Beam]: Created beam element objects, in order
+        #         from start to end.
 
-            Example::
+        #     Example::
 
-                # Straight line, 5 divisions
-                Element.Beam.PLine([[0,0,0],[10,0,0]], n_div=5, mat=1, sect=2)
+        #         # Straight line, 5 divisions
+        #         Element.Beam.PLine([[0,0,0],[10,0,0]], n_div=5, mat=1, sect=2)
 
-                # Curved girder, angle varies from 0° to 30° to 0°
-                pts = [[0,0,0],[5,1,0],[10,0,0]]
-                Element.Beam.PLine(pts, n_div=10, deg=2, angle=[0, 30, 0])
-            """
-            if id == None: id = 0
-            beam_nodes = []
-            beam_obj = []
-            if n_div == 0:
-                i_loc = points_loc
-            else:
-                i_loc = _interpolateAlignment(points_loc, n_div, deg, 0, includePoint, div_axis)
+        #         # Curved girder, angle varies from 0° to 30° to 0°
+        #         pts = [[0,0,0],[5,1,0],[10,0,0]]
+        #         Element.Beam.PLine(pts, n_div=10, deg=2, angle=[0, 30, 0])
+        #     """
+        #     if id == None: id = 0
+        #     beam_nodes = []
+        #     beam_obj = []
+        #     if n_div == 0:
+        #         i_loc = points_loc
+        #     else:
+        #         i_loc = _interpolateAlignment(points_loc, n_div, deg, 0, includePoint, div_axis)
 
-            num_points = len(i_loc)
-            angle_intrp_finalY = _SInterp(angle, num_points - 1)  # Beta Angle applied to Elements, so n-1
+        #     num_points = len(i_loc)
+        #     angle_intrp_finalY = _SInterp(angle, num_points - 1)  # Beta Angle applied to Elements, so n-1
 
-            for i in i_loc:
-                Enode = Node(i[0], i[1], i[2])
-                beam_nodes.append(Enode.ID)
-            for i in range(len(i_loc) - 1):
-                if id == 0: id_new = 0
-                else: id_new = id + i
-                beam_obj.append(Element.Beam(beam_nodes[i], beam_nodes[i+1], mat, sect, angle_intrp_finalY[i].item(), group, id_new, bLocalAxis))
+        #     for i in i_loc:
+        #         Enode = Node(i[0], i[1], i[2])
+        #         beam_nodes.append(Enode.ID)
+        #     for i in range(len(i_loc) - 1):
+        #         if id == 0: id_new = 0
+        #         else: id_new = id + i
+        #         beam_obj.append(Element.Beam(beam_nodes[i], beam_nodes[i+1], mat, sect, angle_intrp_finalY[i].item(), group, id_new, bLocalAxis))
 
-            return beam_obj
+        #     return beam_obj
 
 # ===== FUNCTION STRIPPED DOWN FOR TABLE ====
 class TableOptionss:
@@ -4242,7 +4242,15 @@ if st.button("Run Optimization", type="primary", width='stretch'):
     
     status_box = st.empty()
     status_box.info("Optimization has STARTED. This may take 30–90 seconds. Please wait…") 
-    
+    #changing units to N and mm #here
+    unit_data_cache = MidasAPI("GET", "/db/UNIT", {}) #storing old ones
+    # Unit switching logic
+    unit_data_cache_copy = unit_data_cache
+    if "UNIT" in unit_data_cache_copy:
+        unit_data_cache_copy["Assign"] = unit_data_cache_copy.pop("UNIT")
+    orignal_1 = unit_data_cache_copy #Will be used later
+    MidasAPI("PUT","/db/UNIT",{'Assign': {'1': {'FORCE': 'N', 'DIST': 'MM', 'HEAT': 'BTU', 'TEMPER': 'F'}}})# changing units to N mm
+
     with st.spinner("Fetching forces from MIDAS GEN NX and running optimization..."):
         try:
             # Re-verify sync status using session MAPI
@@ -4252,7 +4260,7 @@ if st.button("Run Optimization", type="primary", width='stretch'):
                     Node.sync()
                     Element.sync()
                 except Exception:
-                    st.error("Cannot connect API error")
+                    st.error("error: Cannot connect API")
                     st.stop()
             else:
                 MAPI_KEY(st.session_state["MAPI"])
@@ -4309,6 +4317,7 @@ if st.button("Run Optimization", type="primary", width='stretch'):
             st.session_state["optimization_result"] = result
             status_box.empty()
             st.success(f"Optimization finished in {t1 - t0:.1f} seconds!.")
+            MidasAPI("PUT","/db/UNIT",orignal_1) ##at later #for forces gathering part
         except KeyError:
             status_box.empty()
             st.session_state["optimization_result"] = None
@@ -4393,7 +4402,13 @@ if st.session_state.get("optimization_result"):
             with col_int1:
                 if st.button("Send To MIDAS GEN NX Model", type="primary", width='stretch', key="send_to_model_persistent"):
                     try:
+                        unit_data_cache_copy = unit_data_cache
+                        if "UNIT" in unit_data_cache_copy:
+                            unit_data_cache_copy["Assign"] = unit_data_cache_copy.pop("UNIT")
+                        orignal_2 = unit_data_cache_copy
+                        MidasAPI("PUT","/db/UNIT",{'Assign': {'1': {'FORCE': 'N', 'DIST': 'MM', 'HEAT': 'BTU', 'TEMPER': 'F'}}})
                         update_section(result, st.session_state.get("MAPI", ""))
+                        MidasAPI("PUT","/db/UNIT",orignal_2) #set to orignal again
                         st.success("Sections successfully sent & updated in the MIDAS GEN NX model!")
                     except Exception as e:
                         st.error(f"Failed to send sections to model: {str(e)}")
