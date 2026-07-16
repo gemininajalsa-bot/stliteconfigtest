@@ -4059,10 +4059,10 @@ with st.sidebar:
     st.subheader("Section Geometry Limits")
     col_b1, col_b2 = st.columns(2)
     with col_b1:
-        fw_lo = st.number_input("FW min", 100, 1000, 150)
-        ft_lo = st.number_input("FT min", 4, 40, 6)
-        wdi_lo = st.number_input("WDi / WDj min", 200, 1200, 300)
-        wt_lo = st.number_input("WT min", 4, 40, 6)
+        fw_lo = st.number_input("FW min (mm)", 100, 1000, 150)
+        ft_lo = st.number_input("FT min (mm)", 4, 40, 6)
+        wdi_lo = st.number_input("WD min (mm)", 200, 1200, 300)
+        wt_lo = st.number_input("WT min (mm)", 4, 40, 6)
     with col_b2:
         fw_hi = st.number_input("FW max (mm)", 100, 1000, 400)
         ft_hi = st.number_input("FT max (mm)", 4, 40, 20)
