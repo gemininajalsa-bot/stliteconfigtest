@@ -4109,7 +4109,7 @@ with st.sidebar:
     # st.write(req_cls)  # debug
 
 # ====================== COMBINATION AND SPLICE GROUP FORM ======================
-st.header("Define PEB UNITS")
+#removed define peb units header as main define was below
 st.image(data_uri, caption="PEB UNIT and Splice Groups", width='stretch')
 
 if st.session_state["MAPI"] and st.session_state.get("model_synced"):
@@ -4181,7 +4181,7 @@ def add_group_selection(entity_idx: int, group_idx: int, mapi_from_st: str):
             st.session_state[key_name] = ", ".join(map(str, elist))
     except Exception as e:
         st.error(f"Could not fetch elements: {e}")
-
+st.subheader("Define PEB UNITS", anchor=False)
 # Render dynamic form
 for e_idx, entity in enumerate(st.session_state.entities):
     with st.expander(f"📦 PEB UNIT {e_idx + 1} — {len(entity)} Splice Groups", expanded=True):
