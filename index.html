@@ -30,7 +30,7 @@ import streamlit as st
 import numpy as np
 import json
 #from time import time
-import asyncio
+# import asyncio
 from time import sleep, time
 from typing import List, Dict, Tuple, Any, Optional,Literal
 import requests
@@ -38,6 +38,7 @@ import sys
 # from tqdm import tqdm
 from math import hypot,sin,cos,pi
 from scipy.stats import qmc
+# import os # remove #ONLY FOR GROUP UR DEBUG
 #================ midas civil internal functions here==========
 #literals
 _dbsection = Literal["L","C","H","T","B","P","2L","2C","SB","SR","OCT"]
@@ -2944,9 +2945,11 @@ def compute_max_ur_vectorized(
     #applying req class
     UR_final = np.maximum(UR_Axial,np.maximum(UR_Shear,np.maximum(UR_Moment,UR_Combined)))
     UR_req = np.where(overall_cls == req_cls,UR_final,1.5) #later change it to  == in streamlit after testing #failing the UR here itself
-    UR_val = UR_req.max()*100  #rest of the code is in percent
     
-    return UR_val
+    UR_val = float(UR_req.max() * 100)  #rest of the code is in percent
+    max_idx = np.unravel_index(np.argmax(UR_req, axis=None), UR_req.shape)
+    
+    return UR_val, max_idx[0]
 
 # def is800_ur_scalar(
 #     fw: float, ft: float, wd: float, wt: float,
@@ -3075,6 +3078,7 @@ def compute_group_max_ur(
     positions_local = np.array([0.0, 0.25, 0.5, 0.75, 1.0])   # within each member
 
     max_ur = 0.0
+    gov_comb = ""
     cumulative = 0.0
 
     for eid in group_element_ids:
@@ -3091,22 +3095,125 @@ def compute_group_max_ur(
         elem_loads = loads_by_element[eid]
 
         # Build load arrays
+        comb_all = [lc["comb"] for lc in elem_loads]
         fx_all = np.array([lc["fx"] for lc in elem_loads], dtype=float)
         fz_all = np.array([lc["fz"] for lc in elem_loads], dtype=float)
         my_all = np.array([lc["my"] for lc in elem_loads], dtype=float)
         mz_all = np.array([lc["mz"] for lc in elem_loads], dtype=float)
         fy_all = np.array([lc["fy"] for lc in elem_loads], dtype=float)
-        # add mz and fy here if required in the future #done
 
         wdi_elem = float(wd_at_pos[0])
         wdj_elem = float(wd_at_pos[-1])
         
-        ur_elem = compute_max_ur_vectorized(fw, ft, wdi_elem, wdj_elem, wt, fx_all, fz_all, my_all,mz_all,fy_all,Ky = Ky,Kz = Kz,Ly = Ly,Lz = Lz,L_lt = L_lt,Cmy = Cmy,Cmz = Cmz,Cm_lt = Cm_lt,fy=fy,req_cls = req_cls)
+        ur_elem_val, max_case_idx = compute_max_ur_vectorized(fw, ft, wdi_elem, wdj_elem, wt, fx_all, fz_all, my_all,mz_all,fy_all,Ky = Ky,Kz = Kz,Ly = Ly,Lz = Lz,L_lt = L_lt,Cmy = Cmy,Cmz = Cmz,Cm_lt = Cm_lt,fy=fy,req_cls = req_cls)
         
-        max_ur = max(max_ur, ur_elem)
+        if ur_elem_val > max_ur:
+            max_ur = ur_elem_val
+            gov_comb = comb_all[max_case_idx]
+            
         cumulative += L_elem
 
-    return max_ur
+    return max_ur, gov_comb
+#BELOW IS FOR DEBUG ONLY DO NOT USE IN PROD
+# def compute_group_max_ur(
+#     fw: float, ft: float, wdi_grp: float, wdj_grp: float, wt: float,
+#     group_element_ids: List[int],
+#     loads_by_element: Dict[int, List[Dict]],
+#     member_lengths_m: Dict[int, float],
+#     Ky: float, Kz: float, Ly: float, Lz: float, L_lt: float,
+#     Cmy: float, Cmz: float, Cm_lt: float, fy: float, req_cls: int
+# ) -> float:
+#     """
+#     Compute the governing UR for an entire slicing group treated as ONE holistic taper.
+
+#     The group spans from WDi_grp (i-end of first member) to WDj_grp (j-end of last member).
+#     The depth at any point is linearly interpolated over the TOTAL group length.
+
+#     For each element:
+#       - Compute its fractional position within the group [alpha_start, alpha_end].
+#       - The 5 check-positions within the element map to 5 global fractions.
+#       - WD at each check-position = wdi_grp + global_frac * (wdj_grp - wdi_grp).
+#       - FW, FT, WT are constant across the group.
+
+#     Returns the maximum UR across all elements, all load cases, all positions.
+#     """
+#     total_len = sum(member_lengths_m[eid] for eid in group_element_ids)
+#     positions_local = np.array([0.0, 0.25, 0.5, 0.75, 1.0])   # within each member
+
+#     max_ur = 0.0
+#     cumulative = 0.0
+
+#     for eid in group_element_ids:
+#         L_elem  = member_lengths_m[eid]
+#         alpha_s = cumulative / total_len              # global fraction at i-end
+#         alpha_e = (cumulative + L_elem) / total_len   # global fraction at j-end
+        
+#         # Global fractions at the 5 check positions within this element
+#         global_fracs = alpha_s + positions_local * (alpha_e - alpha_s)  
+
+#         # WD at each of the 5 positions
+#         wd_at_pos = wdi_grp + global_fracs * (wdj_grp - wdi_grp)     
+
+#         elem_loads = loads_by_element[eid]
+
+#         # Build load arrays
+#         fx_all = np.array([lc["fx"] for lc in elem_loads], dtype=float)
+#         fz_all = np.array([lc["fz"] for lc in elem_loads], dtype=float)
+#         my_all = np.array([lc["my"] for lc in elem_loads], dtype=float)
+#         mz_all = np.array([lc["mz"] for lc in elem_loads], dtype=float)
+#         fy_all = np.array([lc["fy"] for lc in elem_loads], dtype=float)
+
+#         wdi_elem = float(wd_at_pos[0])
+#         wdj_elem = float(wd_at_pos[-1])
+        
+#         ur_elem = compute_max_ur_vectorized(
+#             fw, ft, wdi_elem, wdj_elem, wt, fx_all, fz_all, my_all, mz_all, fy_all,
+#             Ky=Ky, Kz=Kz, Ly=Ly, Lz=Lz, L_lt=L_lt, 
+#             Cmy=Cmy, Cmz=Cmz, Cm_lt=Cm_lt, fy=fy, req_cls=req_cls
+#         )
+        
+#         max_ur = max(max_ur, float(ur_elem))
+#         cumulative += L_elem
+
+#     # --- INLINE JSON LOGGING ---
+#     call_record = {
+#         "inputs": {
+#             "fw": fw, "ft": ft, "wdi_grp": wdi_grp, "wdj_grp": wdj_grp, "wt": wt,
+#             "group_element_ids": group_element_ids,
+#             "loads_by_element": loads_by_element,
+#             "member_lengths_m": member_lengths_m,
+#             "Ky": Ky, "Kz": Kz, "Ly": Ly, "Lz": Lz, "L_lt": L_lt,
+#             "Cmy": Cmy, "Cmz": Cmz, "Cm_lt": Cm_lt, "fy": fy, "req_cls": req_cls
+#         },
+#         "output_max_ur": max_ur
+#     }
+    
+#     debug_file = "debuggroup.json"
+    
+#     # 1. Read existing file if it exists, otherwise start an empty list
+#     if os.path.exists(debug_file):
+#         try:
+#             with open(debug_file, "r") as f:
+#                 debug_data = json.load(f)
+#         except (json.JSONDecodeError, ValueError):
+#             debug_data = [] # Fallback if file is corrupted or empty
+#     else:
+#         debug_data = []
+        
+#     # 2. Append the current run
+#     debug_data.append(call_record)
+    
+#     # 3. Write everything back to the file
+#     with open(debug_file, "w") as f:
+#         json.dump(
+#             debug_data, 
+#             f, 
+#             indent=4, 
+#             # Lambda handles any numpy floats/arrays that might cause a JSON serialization error
+#             default=lambda x: x.item() if hasattr(x, 'item') else (x.tolist() if hasattr(x, 'tolist') else str(x))
+#         )
+
+#     return max_ur
 
 # ====================== VOLUME CALCULATION ======================
 
@@ -3215,10 +3322,10 @@ def _solve_group_lhs(
 
         fw, ft, wdi, wdj, wt = full["fw"], full["ft"], full["wdi"], full["wdj"], full["wt"]
 
-        max_ur = compute_group_max_ur(fw, ft, wdi, wdj, wt,group_element_ids, loads_by_element, member_lengths_m,Ky = Ky,Kz = Kz,Ly = Ly,Lz = Lz,L_lt = L_lt,Cmy = Cmy,Cmz = Cmz,Cm_lt = Cm_lt,fy = fy,req_cls = req_cls) #Fy will come here
+        max_ur, gov_comb = compute_group_max_ur(fw, ft, wdi, wdj, wt,group_element_ids, loads_by_element, member_lengths_m,Ky = Ky,Kz = Kz,Ly = Ly,Lz = Lz,L_lt = L_lt,Cmy = Cmy,Cmz = Cmz,Cm_lt = Cm_lt,fy = fy,req_cls = req_cls) #Fy will come here
         if max_ur <= target_ur_pct:
             vol = calculate_group_volume(fw, ft, wdi, wdj, wt,group_element_ids, member_lengths_m)
-            feasible.append({**full, "volume": vol, "ur": max_ur})
+            feasible.append({**full, "volume": vol, "ur": max_ur, "gov_comb": gov_comb})
 
     if not feasible:
         return None, 0
@@ -3341,10 +3448,10 @@ def _refine_group(
                 lo, hi = bounds[k]
                 if not (lo <= v <= hi):
                     return
-            ur = compute_group_max_ur(fw, ft, wdi, wdj, wt,group_element_ids, loads_by_element, member_lengths_m,Ky = Ky,Kz = Kz,Ly = Ly,Lz = Lz,L_lt = L_lt,Cmy = Cmy,Cmz = Cmz,Cm_lt = Cm_lt,fy=fy,req_cls = req_cls)
+            ur, gov_comb = compute_group_max_ur(fw, ft, wdi, wdj, wt,group_element_ids, loads_by_element, member_lengths_m,Ky = Ky,Kz = Kz,Ly = Ly,Lz = Lz,L_lt = L_lt,Cmy = Cmy,Cmz = Cmz,Cm_lt = Cm_lt,fy=fy,req_cls = req_cls)
             if ur <= target_ur_pct:
                 vol = calculate_group_volume(fw, ft, wdi, wdj, wt,group_element_ids, member_lengths_m)
-                refined.append({**full, "volume": vol, "ur": ur})
+                refined.append({**full, "volume": vol, "ur": ur, "gov_comb": gov_comb})
             return
         k = free_keys[idx]
         for d in deltas[k]:
@@ -3649,10 +3756,11 @@ def optimize_multi_group(
         "",
     ]
     for g_idx, res in enumerate(best_group_res):
+        gov = res.get('gov_comb', 'N/A')
         lines.append(
             f"  Group {g_idx+1} (elements {entity[g_idx]}): "
             f"FW={res['fw']} FT={res['ft']} WDi={res['wdi']} WDj={res['wdj']} WT={res['wt']} "
-            f"| Vol={res['volume']:,.0f} mm³  UR={res['ur']:.1f}%"
+            f"| Vol={res['volume']:,.0f} mm³  UR={res['ur']:.1f}%  Gov={gov}"
         )
     lines.append("")
     lines.append("Per-Element Sections:")
@@ -3746,7 +3854,11 @@ def optimize_multiple_entities(
     merged_member_sections = {}
     combined_volume        = 0.0
     summary_lines          = []
-
+    if verbose:
+        print("\n" + "#" * 70)
+        # print(loads_by_element)
+        print(bounds)
+        print("#" * 70)
     for ent_idx, entity in enumerate(entities, start=1):
         if verbose:
             print("\n" + "#" * 70)
@@ -3779,7 +3891,7 @@ def optimize_multiple_entities(
             steps = steps,
             target_ur_pct = target_ur_pct,
             n_iter = n_iter,
-            base_seed = base_seed + ent_idx * 10000,
+            base_seed = base_seed, #+ ent_idx * 10000, #seed is now fixed
             verbose = verbose, #cmy,cmz,cmlt
             Ky = Ky, #added extras in (1)
             Kz = Kz,
@@ -3937,9 +4049,9 @@ def load_dict_generator(unique_elems:list,mapi_key_str:str,allowed_combs:list,fo
             loads_by_element[elem] = []
             comb_over_by_elem[elem] = set()
 
-        # New combination for current element create fresh dict with none
+        # New combination for current element create fresh dict with none #comb added for governing UR
         if comb not in comb_over_by_elem[elem]:
-            loads_by_element[elem].append({'fx': [None] * 5,'fy': [None] * 5,'fz': [None] * 5,'my': [None] * 5,'mz': [None] * 5})
+            loads_by_element[elem].append({'comb': comb, 'fx': [None] * 5,'fy': [None] * 5,'fz': [None] * 5,'my': [None] * 5,'mz': [None] * 5})
             comb_over_by_elem[elem].add(comb)
 
         # Fill the current (last) dict
@@ -3973,7 +4085,7 @@ def get_steel_comb_list(mapi_key:str):  #check for name overlap bug 'sLCB6': ['s
     for comb_name in steel_comb_unique:
         names_in_dict = []
         for uname in unique_comb:
-            if uname.startswith(comb_name) and uname[len(comb_name):] in ["(min)","(max)","(all)",""]:  #fixed bug which caused extra names in the list
+            if uname.startswith(comb_name) and uname[len(comb_name):] in ["(min)","(max)",""]:  #fixed bug which caused extra names in the list #removing "all" for design
                 names_in_dict.append(uname)
         name_dict[comb_name] = names_in_dict
     return name_dict
@@ -3984,10 +4096,35 @@ def keystofull(selected_comb_form:list,name_dict:dict):
     return final_selection
 
 
-#final button #THIS DOES NOT WORK  FOR THE SAME ID THING CHECK# NEEDS UPDATING
+#final button #THIS DOES NOT WORK  FOR THE SAME ID THING CHECK# NEEDS UPDATING #DO NOT USE IN PROD # USE BELOW ONE
+# def update_section(optimizer_res:dict,mkey:str):
+#     try:
+#         MAPI_KEY(mkey)
+#         Node.clear()
+#         Element.clear()
+#         Section.clear()
+#         Node.sync()
+#         Element.sync()
+#         Section.sync()
+#         for elemid, info in optimizer_res['merged_member_sections'].items():
+#             print(f"eid - {elemid} | info - {info}")
+#             print(f"fw {info['fw']}|ft {info['ft']}|wt {info['wt']}|wd_i {info['wd_i']}|wd_j {info['wd_j']}")
+#             curr_id = Section.Tapered.DBUSER(f'Section_For_{elemid}','H',[info['wd_i']*0.001,info['fw']*0.001,info['wt']*0.001,info['ft']*0.001,info['fw']*0.001,info['ft']*0.001,0,0],[info['wd_j']*0.001,info['fw']*0.001,info['wt']*0.001,info['ft']*0.001,info['fw']*0.001,info['ft']*0.001,0,0])  #check Formula for conversion # needs correction
+#             print(f'New section made is now {curr_id.ID} ID')
+#             for elem in Element.elements:
+#                 if int(elem.ID) == int(elemid):
+#                     elem.SECT = curr_id.ID
+#         Section.create()
+#         Element.create()
+#         output_string = "Sucess"
+#     except Exception as e:
+#         output_string = (f"failed with following error \n {e}")
+#     return output_string
+#Function Updated with persistent ID
 def update_section(optimizer_res:dict,mkey:str):
     try:
         MAPI_KEY(mkey)
+        MAPI_BASEURL.autoURL()
         Node.clear()
         Element.clear()
         Section.clear()
@@ -3997,11 +4134,12 @@ def update_section(optimizer_res:dict,mkey:str):
         for elemid, info in optimizer_res['merged_member_sections'].items():
             print(f"eid - {elemid} | info - {info}")
             print(f"fw {info['fw']}|ft {info['ft']}|wt {info['wt']}|wd_i {info['wd_i']}|wd_j {info['wd_j']}")
-            curr_id = Section.Tapered.DBUSER(f'Section_For_{elemid}','H',[info['wd_i']*0.001,info['fw']*0.001,info['wt']*0.001,info['ft']*0.001,info['fw']*0.001,info['ft']*0.001,0,0],[info['wd_j']*0.001,info['fw']*0.001,info['wt']*0.001,info['ft']*0.001,info['fw']*0.001,info['ft']*0.001,0,0])
+            curr_id = Section.Tapered.DBUSER(f'Section_For_{elemid}','H',[info['wd_i']*0.001 + 2*info['ft']*0.001, info['fw']*0.001,info['wt']*0.001,info['ft']*0.001,info['fw']*0.001,info['ft']*0.001,0,0],[info['wd_j']*0.001 + 2*info['ft']*0.001,info['fw']*0.001,info['wt']*0.001,info['ft']*0.001,info['fw']*0.001,info['ft']*0.001,0,0])  #check Formula for conversion # needs correction #fixed
             print(f'New section made is now {curr_id.ID} ID')
-            for elem in Element.elements:
-                if int(elem.ID) == int(elemid):
-                    elem.SECT = curr_id.ID
+            for section in Section.sect:   #
+                if str(section.NAME) == str(f'Section_For_{elemid}'):  #
+                    curr_id.ID = section.ID          #
+            print(f'New section made is now {curr_id.ID} ID, After the ID MATCHING')
         Section.create()
         Element.create()
         output_string = "Sucess"
@@ -4063,12 +4201,12 @@ with st.sidebar:
     with col_b1:
         fw_lo = st.number_input("FW min (mm)", 100, 1000, 150)
         ft_lo = st.number_input("FT min (mm)", 4, 40, 6)
-        wdi_lo = st.number_input("WD min (mm)", 200, 1200, 300)
+        wdi_lo = st.number_input("WD min (mm)", 100, 1200, 400)
         wt_lo = st.number_input("WT min (mm)", 4, 40, 6)
     with col_b2:
         fw_hi = st.number_input("FW max (mm)", 100, 1000, 400)
         ft_hi = st.number_input("FT max (mm)", 4, 40, 20)
-        wdi_hi = st.number_input("WD max (mm)", 200, 1200, 900)
+        wdi_hi = st.number_input("WD max (mm)", 100, 1200, 900)
         wt_hi = st.number_input("WT max (mm)", 4, 40, 20)
 
     bounds = {
@@ -4080,8 +4218,8 @@ with st.sidebar:
     }
     
     st.subheader("Refinement Steps")
-    fw_step = st.number_input("Width/Depth step (mm)", 5, 50, 25)
-    ft_step = st.number_input("Thickness step (mm)", 1, 5, 1)
+    fw_step = st.number_input("Width/Depth step (mm)", 5, 150, 50)
+    ft_step = st.number_input("Thickness step (mm)", 1, 10, 1)
     wdi_step = fw_step
     wt_step = ft_step
     
@@ -4144,8 +4282,8 @@ if st.session_state["MAPI"] and st.session_state.get("model_synced"):
         selected = [p for p in st.session_state["downloaded_dict"] if st.session_state.get(f"cb_{p}", False)]
         st.session_state["imported_list"] = selected
         st.session_state["Final_selection_list"] = keystofull(st.session_state["imported_list"], st.session_state["downloaded_dict"])
-        # st.write(st.session_state["imported_list"])
-        # st.write(st.session_state["Final_selection_list"])
+        # st.write(st.session_state["imported_list"]) #debug
+        # st.write(st.session_state["Final_selection_list"]) #debug
         st.write("<br>", unsafe_allow_html=True)
         st.write(f"**{len(selected)} / {len(st.session_state['downloaded_dict'])}** combination selected")
         st.write("<br>", unsafe_allow_html=True)
@@ -4242,15 +4380,14 @@ if st.button("Run Optimization", type="primary", width='stretch'):
     
     status_box = st.empty()
     status_box.info("Optimization has STARTED. This may take 30–90 seconds. Please wait…") 
-    asyncio.sleep(0.5)
-    #changing units to N and mm #here
+     #changing units to N and mm #here
     unit_data_cache = MidasAPI("GET", "/db/UNIT", {}) #storing old ones
     # Unit switching logic
     unit_data_cache_copy = unit_data_cache
     if "UNIT" in unit_data_cache_copy:
         unit_data_cache_copy["Assign"] = unit_data_cache_copy.pop("UNIT")
     orignal_1 = unit_data_cache_copy #Will be used later
-    MidasAPI("PUT","/db/UNIT",{'Assign': {'1': {'FORCE': 'N', 'DIST': 'MM', 'HEAT': 'BTU', 'TEMPER': 'F'}}})# changing units to N mm
+    MidasAPI("PUT","/db/UNIT",{'Assign': {'1': {'FORCE': 'KN', 'DIST': 'M', 'HEAT': 'BTU', 'TEMPER': 'F'}}})# changing units to N mm
 
     with st.spinner("Fetching forces from MIDAS GEN NX and running optimization..."):
         try:
@@ -4261,7 +4398,7 @@ if st.button("Run Optimization", type="primary", width='stretch'):
                     Node.sync()
                     Element.sync()
                 except Exception:
-                    st.error("error: Cannot connect API")
+                    st.error("Cannot connect API error")
                     st.stop()
             else:
                 MAPI_KEY(st.session_state["MAPI"])
@@ -4279,7 +4416,7 @@ if st.button("Run Optimization", type="primary", width='stretch'):
             if len(member_lengths_m) != len(unique_elems):
                 st.warning("Some element lengths could not be retrieved.")
             
-            # Fetch loads
+            # Fetch loads #supported unit is KN, M and converted internally to N , mm
             loads_by_element = load_dict_generator(
                 unique_elems, 
                 st.session_state["MAPI"], 
@@ -4308,7 +4445,7 @@ if st.button("Run Optimization", type="primary", width='stretch'):
                 Cmz=Cm_major,
                 Cm_lt=Cm_lt,
                 fy=Fy_input,
-                req_cls=req_cls
+                req_cls=req_cls,
             )
             t1 = time()
             
@@ -4376,7 +4513,8 @@ if st.session_state.get("optimization_result"):
             ur_rows.append({
                 "Entity": grp.get("entity_index", "-"),
                 "Group": grp.get("group_index", "-"),
-                "Utility Ratio (%)": round(grp.get("ur", 0), 2)
+                "Utility Ratio (%)": round(grp.get("ur", 0), 2),
+                "Governing Combination": grp.get("gov_comb", "-")
             })
         if ur_rows:
             st.dataframe(ur_rows, width='stretch')
@@ -4403,11 +4541,12 @@ if st.session_state.get("optimization_result"):
             with col_int1:
                 if st.button("Send To MIDAS GEN NX Model", type="primary", width='stretch', key="send_to_model_persistent"):
                     try:
+                        unit_data_cache = MidasAPI("GET", "/db/UNIT", {})
                         unit_data_cache_copy = unit_data_cache
                         if "UNIT" in unit_data_cache_copy:
                             unit_data_cache_copy["Assign"] = unit_data_cache_copy.pop("UNIT")
                         orignal_2 = unit_data_cache_copy
-                        MidasAPI("PUT","/db/UNIT",{'Assign': {'1': {'FORCE': 'N', 'DIST': 'MM', 'HEAT': 'BTU', 'TEMPER': 'F'}}})
+                        MidasAPI("PUT","/db/UNIT",{'Assign': {'1': {'FORCE': 'KN', 'DIST': 'M', 'HEAT': 'BTU', 'TEMPER': 'F'}}})
                         update_section(result, st.session_state.get("MAPI", ""))
                         MidasAPI("PUT","/db/UNIT",orignal_2) #set to orignal again
                         st.success("Sections successfully sent & updated in the MIDAS GEN NX model!")
