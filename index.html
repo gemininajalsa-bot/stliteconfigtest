@@ -30,7 +30,7 @@ import streamlit as st
 import numpy as np
 import json
 #from time import time
-# import asyncio
+import asyncio
 from time import sleep, time
 from typing import List, Dict, Tuple, Any, Optional,Literal
 import requests
@@ -4361,7 +4361,11 @@ st.button("➕ Add New PEB UNIT", on_click=add_entity, width='stretch')
 # ====================== RUN BUTTON ======================
 if st.button("Run Optimization", type="primary", width='stretch'):
     entities = st.session_state.entities
-    
+    status_box = st.empty()
+    #this sleep trick works # NOTE INFO MESSAGE WONT SHOW UP IF SLEEP IS NOT USED 
+    sleep(0.1)
+    status_box.info("Optimization has STARTED. This may take 30–90 seconds. Please wait…") 
+    sleep(0.1)
     # Basic validation
     if not entities or all(len(g) == 0 for e in entities for g in e):
         st.error("Please define at least one entity with at least one splice group containing element IDs.")
@@ -4378,8 +4382,7 @@ if st.button("Run Optimization", type="primary", width='stretch'):
         st.error("No valid element IDs found.")
         st.stop()
     
-    status_box = st.empty()
-    status_box.info("Optimization has STARTED. This may take 30–90 seconds. Please wait…") 
+    
      #changing units to N and mm #here
     unit_data_cache = MidasAPI("GET", "/db/UNIT", {}) #storing old ones
     # Unit switching logic
@@ -4388,8 +4391,10 @@ if st.button("Run Optimization", type="primary", width='stretch'):
         unit_data_cache_copy["Assign"] = unit_data_cache_copy.pop("UNIT")
     orignal_1 = unit_data_cache_copy #Will be used later
     MidasAPI("PUT","/db/UNIT",{'Assign': {'1': {'FORCE': 'KN', 'DIST': 'M', 'HEAT': 'BTU', 'TEMPER': 'F'}}})# changing units to N mm
-
+    #normal sleep function from time sleep wont work here
+    #await asyncio.sleep(0.5)
     with st.spinner("Fetching forces from MIDAS GEN NX and running optimization..."):
+        await asyncio.sleep(1)
         try:
             # Re-verify sync status using session MAPI
             if not st.session_state.get("model_synced", False):
