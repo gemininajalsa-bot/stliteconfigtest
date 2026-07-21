@@ -2753,9 +2753,9 @@ def compute_max_ur_vectorized(
     web_ratio = wd / wt
     eps = np.sqrt(250.0 / fy)
     #for b_force_type 0 PC
-    web_cls_PC = np.where(web_ratio <= 84*eps,0,np.where(web_ratio <= 105*eps,1,np.where(web_ratio <= 126*eps,2,3)))
+    web_cls_PB = np.where(web_ratio <= 84*eps,0,np.where(web_ratio <= 105*eps,1,np.where(web_ratio <= 126*eps,2,3)))
     #for b_force_type 1 PB
-    web_cls_PB = np.where(web_ratio <= 42*eps,2,3)
+    web_cls_PC = np.where(web_ratio <= 42*eps,2,3)
     #bforce_type_2 general,addition of calculation for r1 and r2 as given in Table 2 Limiting Width to Thickness Ratio 
     r1 = -fx/(wd*wt*fy) #-fx because of sign convention difference at Table 2 Note 5 , SAME for r2
     r2 = -fx/(A*fy) 
@@ -4136,10 +4136,14 @@ def update_section(optimizer_res:dict,mkey:str):
             print(f"fw {info['fw']}|ft {info['ft']}|wt {info['wt']}|wd_i {info['wd_i']}|wd_j {info['wd_j']}")
             curr_id = Section.Tapered.DBUSER(f'Section_For_{elemid}','H',[info['wd_i']*0.001 + 2*info['ft']*0.001, info['fw']*0.001,info['wt']*0.001,info['ft']*0.001,info['fw']*0.001,info['ft']*0.001,0,0],[info['wd_j']*0.001 + 2*info['ft']*0.001,info['fw']*0.001,info['wt']*0.001,info['ft']*0.001,info['fw']*0.001,info['ft']*0.001,0,0])  #check Formula for conversion # needs correction #fixed
             print(f'New section made is now {curr_id.ID} ID')
-            for section in Section.sect:   #
+            for section in Section.sect:   #for persistent section
                 if str(section.NAME) == str(f'Section_For_{elemid}'):  #
                     curr_id.ID = section.ID          #
             print(f'New section made is now {curr_id.ID} ID, After the ID MATCHING')
+            #for setting that section id to the elem id
+            for elem in Element.elements:
+                if int(elem.ID) == int(elemid):
+                    elem.SECT = curr_id.ID
         Section.create()
         Element.create()
         output_string = "Sucess"
