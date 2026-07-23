@@ -4413,7 +4413,7 @@ if st.button("Run Optimization", type="primary", width='stretch'):
                 MAPI_KEY(st.session_state["MAPI"])
                 Node.sync()
                 Element.sync()
-            
+            Model.analyse()
             # Build member_lengths_m
             member_lengths_m = {}
             for eid in unique_elems:
