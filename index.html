@@ -4328,8 +4328,8 @@ def add_group_selection(entity_idx: int, group_idx: int, mapi_from_st: str):
 st.subheader("Define PEB UNITS", anchor=False)
 # Render dynamic form
 for e_idx, entity in enumerate(st.session_state.entities):
-    with st.expander(f"📦 PEB UNIT {e_idx + 1} — {len(entity)} Splice Groups", expanded=True):
-        st.button("🗑️ Delete this PEB UNIT", key=f"rm_ent_{e_idx}_{st.session_state['app_key_counter']}", on_click=remove_entity, args=(e_idx,))
+    with st.expander(f"PEB UNIT {e_idx + 1} — {len(entity)} Splice Groups", expanded=True):
+        st.button("Delete this PEB UNIT", key=f"rm_ent_{e_idx}_{st.session_state['app_key_counter']}", on_click=remove_entity, args=(e_idx,))
         
         for g_idx, group in enumerate(entity):
             c1, c2, c3 = st.columns([7, 1, 1])
