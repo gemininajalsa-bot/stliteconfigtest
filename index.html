@@ -4522,7 +4522,7 @@ if st.session_state.get("optimization_result"):
             ur_rows.append({
                 "Entity": grp.get("entity_index", "-"),
                 "Group": grp.get("group_index", "-"),
-                "Utility Ratio (%)": round(grp.get("ur", 0), 2),
+                "Utility Ratio": round(grp.get("ur", 0)/100, 2),
                 "Governing Combination": grp.get("gov_comb", "-")
             })
         if ur_rows:
