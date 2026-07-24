@@ -4243,9 +4243,9 @@ with st.sidebar:
     L_major = st.number_input("Unbraced Length about the Major Axis L(y) mm", 0, 9999999, 6700, key="L_major")
     L_minor = st.number_input("Unbraced Length about the Minor Axis L(z) mm", 0, 9999999, 6700, key="L_minor")
     L_Lateral = st.number_input("Unbraced Length for Lateral (Le) mm", 0, 9999999, 6700, key="L_Lateral")
-    Cm_major = st.number_input("Equivalent Moment Correction Factor (Cmy)", 0.0, 10, 0.9, key="Cmy")
-    Cm_minor = st.number_input("Equivalent Moment Correction Factor (Cmz)", 0.0, 10, 0.9, key="Cmz")
-    Cm_lt = st.number_input("Equivalent Moment Correction Factor (Cm_lt)", 0.0, 10, 1, key="Cm_lt")
+    Cm_major = st.number_input("Equivalent Moment Correction Factor (Cmy)", 0.0, 10.00, 0.9, key="Cmy")
+    Cm_minor = st.number_input("Equivalent Moment Correction Factor (Cmz)", 0.0, 10.00, 0.9, key="Cmz")
+    Cm_lt = st.number_input("Equivalent Moment Correction Factor (Cm_lt)", 0.0, 10.00, 1.0, key="Cm_lt")
     
     options_sec = ["Plastic", "Compact", "Semi-compact"]
     Preffered_section_select = st.selectbox("Prefered Section type", options_sec, index=2, placeholder="Semi-compact", key="Preffered section")
